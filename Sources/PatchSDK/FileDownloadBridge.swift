@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import WasmKit
 
 // MARK: - FileDownloadBridge (download a URL to a sandboxed file)
