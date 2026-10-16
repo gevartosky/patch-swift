@@ -82,3 +82,9 @@ jobs:
           swift-version: "6.4.0"
           # Ubuntu runners can run out of disk while installing the emulator.
           free-disk-space: true
+          # Swift 6.4 (swift-build backend) names the test resource bundle
+          # `PatchSDK_PatchSDKTests.bundle`, but the action only copies
+          # `*.resources` to the emulator, so Bundle.module fatal-errors. Copy the
+          # .bundle too. `${BUILD_DIR}` is the action's own build-products
+          # variable: this value is pasted into its shell script verbatim.
+          copy-files: ${BUILD_DIR}/*.bundle
