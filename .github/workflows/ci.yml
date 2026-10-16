@@ -77,7 +77,8 @@ jobs:
       - name: Build + test on Android emulator
         uses: skiptools/swift-android-action@v2
         with:
-          # Pinned to the toolchain the Android port was verified with.
-          swift-version: "6.4"
+          # Pinned to the toolchain the Android port was verified with. Must be
+          # the full release name: "6.4" resolves to a non-existent download.
+          swift-version: "6.4.0"
           # Ubuntu runners can run out of disk while installing the emulator.
           free-disk-space: true

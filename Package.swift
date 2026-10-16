@@ -78,7 +78,10 @@ let package = Package(
         // Apple's swift-crypto: the CryptoKit API for platforms without CryptoKit
         // (Android). Only linked on non-Apple platforms (see the `.when` conditions
         // below); Apple builds keep using the system CryptoKit, so it adds nothing
-        // to an iOS app. Wide range so it rarely conflicts with a consumer's pin.
+        // to an iOS app. Wide range so it rarely conflicts with a consumer's pin;
+        // SwiftPM skips releases whose tools-version is newer than the active
+        // toolchain (swift-crypto 4.4+ needs 6.1, 5.x needs 6.2), so Swift 6.0
+        // consumers still resolve a compatible version.
         .package(url: "https://github.com/apple/swift-crypto.git", "3.0.0" ..< "6.0.0")
     ],
     targets: [
