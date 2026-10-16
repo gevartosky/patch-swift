@@ -57,7 +57,25 @@ Simulator build succeeds.
 On the `android-prototype` branch, **every target in the package and the full
 test bundle build and link for Android** (`swift build --swift-sdk
 aarch64-unknown-linux-android28 --build-tests`, and `skip android build`).
-Nothing has *run* on an Android device or emulator yet.
+
+**The test suite passes on an Android emulator** (`skip android test`, Android
+17, arm64, 16 KB page size): **771 tests, 0 failures, 6 skipped**. The skips
+are the same ones that skip on macOS: a fixture that isn't committed, and one
+source-audit test. That covers the WasmKit interpreter running real
+Swift-compiled guest modules, value marshalling, the module loader, Brotli and
+BSDIFF40 diff application, SHA-256 verification, the update lifecycle and
+fallback, and the platform-neutral bridges. The remaining ~260 tests of the
+macOS suite exercise Apple-only code (SwiftUI/UIKit renderers, CoreImage, PDF)
+and are compiled out on Android.
+
+Device findings:
+
+- **HTTPS works** through Foundation's `URLSession` (libcurl) on the emulator.
+  TLS and certificate validation needed no extra setup.
+- **`file://` URLs are not supported** by `URLSession` on Android
+  (`NSURLErrorUnsupportedURL`). `FileDownloadBridge` now copies local files
+  directly off Apple platforms. Any other code that loads `file://` URLs
+  through `URLSession` will need the same treatment.
 
 | Target | Builds for Android | Notes |
 | --- | --- | --- |
@@ -110,7 +128,8 @@ truncated streams and trailing bytes, and there are tests for both.
   pattern (see `LocationBridge`). Real Android bridges plug into that, so the
   work is filling it in rather than rewriting.
 
-Still open: running the tests on an emulator; deciding which bridges get
+Still open: a real Android app integration (not just the test runner);
+performance and binary size on a physical device; deciding which bridges get
 native Android implementations; the package structure (below).
 
 ## Decision 1: package structure
@@ -214,7 +233,7 @@ Recommendation: ship option 1 first and evaluate options 2 and 3 separately.
 | --- | --- |
 | Google Play policy | The interpreter exemption looks like a clear fit, but needs legal sign-off |
 | Positioning | The README says "Not a cross-platform runtime". This doesn't change that: it's still native Swift. But marketing should frame it as "Swift, wherever Swift runs" |
-| WasmKit on Android | It compiles; nobody has measured runtime behaviour and performance on a real device yet |
+| WasmKit on Android | Runs correctly on an arm64 emulator (full runtime test suite passes); performance on a physical device is not yet measured |
 | Ecosystem maturity | Swift on Android is new; customer demand needs validating before a large investment |
 | Maintenance cost | Two platforms in the bridge test matrix; partly offset by the core split |
 | Vendored C code | Brotli and bzip2 need tracking for security advisories. Each vendored folder has a README with the pinned version, commit and update steps |
@@ -224,8 +243,8 @@ Recommendation: ship option 1 first and evaluate options 2 and 3 separately.
 
 | Phase | Scope | Size |
 | --- | --- | --- |
-| 0 — Done (prototype) | Portable compression and crypto, portability guards; whole package + test bundle build for Android (Option C style) | — |
-| 1 — Core on Android | Pick an option for Decision 1; CI job; test suite passes on an emulator | M |
+| 0 — Done (prototype) | Portable compression and crypto, portability guards; whole package builds for Android and the test suite passes on an emulator (Option C style) | — |
+| 1 — Core on Android | Pick an option for Decision 1; CI job running `skip android test` | S–M |
 | 2 — Logic patching on a device | Loader + runtime + update flow end to end in a sample Android app; "not registered" default for Apple-only bridges | M |
 | 3 — Native Android bridges | Keystore, location, haptics, open URL, share, biometrics, picked by usage data | M–L |
 | 4 — Engine + Gradle integration | `patchcli` support for Android projects | L |
@@ -251,5 +270,6 @@ All on the `android-prototype` branch of a fork, nothing upstream.
   Combine) use the same guard as the code under test; `autoreleasepool` is
   only used where the ObjC runtime exists.
 - `DiffApplyTests`: three new Brotli failure-case tests.
+- `FileDownloadBridge`: copies `file://` URLs directly off Apple platforms.
 - Verified: full macOS suite 1031 tests / 0 failures; iOS Simulator build
-  succeeds; Android build of all targets + tests succeeds.
+  succeeds; Android emulator suite 771 tests / 0 failures.

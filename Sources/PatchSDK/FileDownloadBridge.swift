@@ -92,6 +92,16 @@ public struct FileDownloadBridge: Bridge {
         let box = PathBox()
         let dest = destinationDirectory.appendingPathComponent(destinationName(for: url))
 
+        #if !canImport(Darwin)
+        // FoundationNetworking off Darwin (Android) rejects `file://` URLs with
+        // NSURLErrorUnsupportedURL, so copy local files directly. Same result as
+        // the URLSession path on Apple platforms: the file lands at `dest`.
+        if url.isFileURL {
+            try? fm.removeItem(at: dest)
+            return (try? fm.copyItem(at: url, to: dest)) != nil ? dest.path : nil
+        }
+        #endif
+
         let task = session.downloadTask(with: url) { tempURL, response, _ in
             defer { sem.signal() }
             guard let tempURL else { return }
